@@ -1,5 +1,10 @@
 #!/bin/bash
 
+######################################################################################
+# Author: David Morais - DevOps Egineer
+# Description: Script que realiza o dump diario da base de dados do projeto Sapiencia.
+######################################################################################
+
 #PARAMETROS
 BACKUP_DIR=/data/backup/databases
 PGBIN=/usr/pgsql-12/bin

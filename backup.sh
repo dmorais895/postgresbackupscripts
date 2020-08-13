@@ -2,7 +2,9 @@
 
 ######################################################################################
 # Author: David Morais - DevOps Egineer
+# Email: moraisdavid8@gmail.com
 # Description: Script que realiza o dump diario da base de dados do projeto Sapiencia.
+# Version: 0.0.1
 ######################################################################################
 
 #PARAMETROS

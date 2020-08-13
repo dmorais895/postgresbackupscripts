@@ -42,7 +42,7 @@ Obs. 1: **O diretorio /backup citado na secao _diretorios_ e seus arquivos filho
 
 Obs. 2: **Ao realizar uma alteracao no script, nunca deve ser commitado a alteracao com a senha real salva no arquivo. Se isto acontecer, a senha do usuario deve ser trocada.**
 
-### [rotate_databases.sh](#https://projetos.imd.ufrn.br/projectdashinfra/devops/postgresbackupscripts/-/blob/master/rotate_databases.sh) 
+### [rotate_databases.sh](https://projetos.imd.ufrn.br/projectdashinfra/devops/postgresbackupscripts/-/blob/master/rotate_databases.sh) 
 
 Este script realiza a rotacao das bases de dados no ambiente de testes (bd-sapiencia-testes). Utilizando os dumps gerados pelo pelo **backup**, esse script mantem os bancos de dois dias anteriores. Sendo:
 
@@ -69,7 +69,7 @@ Obs. 2: **Ao realizar uma alteracao no script, nunca deve ser commitado a altera
 
 ## Como ficam os dumps?
 
-Apos executada a rotina [backup.sh](#https://projetos.imd.ufrn.br/projectdashinfra/devops/postgresbackupscripts/-/blob/master/backup.sh), os dumps ficam organizados seguinte forma:
+Apos executada a rotina [backup.sh](https://projetos.imd.ufrn.br/projectdashinfra/devops/postgresbackupscripts/-/blob/master/backup.sh), os dumps ficam organizados seguinte forma:
 
 ```
 databases

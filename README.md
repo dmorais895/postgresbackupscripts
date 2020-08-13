@@ -27,7 +27,7 @@ Na vm que ira realizar o dump é preciso ter a seguinte estrutura de diretorios.
 * backup
 * rotate_databases
 
-### [backup.sh](#https://projetos.imd.ufrn.br/projectdashinfra/devops/postgresbackupscripts/-/blob/7de39b86034f1ac63fe709c16bad2cb3701bd0b7/backup.sh) 
+### [backup.sh](https://projetos.imd.ufrn.br/projectdashinfra/devops/postgresbackupscripts/-/blob/master/backup.sh) 
 
 Este script realiza o dump da base de dados postgres do projeto projeto sapiencia. Para sua execucao eh preciso que sejam configuradas as seguintes as seguintes variaveis:
 

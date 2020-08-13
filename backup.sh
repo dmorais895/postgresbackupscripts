@@ -42,12 +42,12 @@ backup_database () {
         DATABASE=$3
         BACKUP_NAME=$4
 	
-	if $PGBIN/pg_dump -h $HOST -p $PORT -U $PGUSER -j 2 -Fd -b -f "$BACKUP_NAME/${DATABASE}" -d $DATABASE &> ${BACKUP_NAME}/${DATABASE}_dump.log
+	if $PGBIN/pg_dump -h $HOST -p $PORT -U $PGUSER -j 2 -Fd -b -f "$BACKUP_NAME/${DATABASE}" -d $DATABASE 2&> ${BACKUP_NAME}/${DATABASE}_dump.log
 	then
 		echo "BACKUP FINALIZADO COM SUCESSO" >> ${BACKUP_NAME}/${DATABASE}_report.log
 	else
 		echo "ERROS OCORRERAM DURANTE O BACKUP" >> ${BACKUP_NAME}/${DATABASE}_report.log
-		echo "MAIS INFORMACOES EM ${BACKUP_NAME}/${DATABASE}_report.log " >> ${BACKUP_NAME}/${DATABASE}_report.log
+		echo "MAIS INFORMACOES EM ${BACKUP_NAME}/${DATABASE}_dump.log " >> ${BACKUP_NAME}/${DATABASE}_report.log
 		exit 1
 	fi
 
@@ -65,11 +65,15 @@ do_backup() {
 	else
 		rm -r $BACKUP_NAME
 	fi
-
+	
+	echo "INICIANDO BACKUP - HORA: $(date +"%Hh%Mm")"
+	echo "REALIZANDO BACKUP DAS ROLES"
 	backup_roles $HOST $PORT $DATABASE $BACKUP_NAME
 	wait
+	echo "REALIZANDO DUMP DA BASE DA DADOS"
 	backup_database $HOST $PORT $DATABASE $BACKUP_NAME
 	wait
+	echo "FINALIZANDO BACKUP - HORA: $(date +"%Hh%Mm")"
 
 }
 

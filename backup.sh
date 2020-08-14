@@ -20,7 +20,7 @@ DUMPDATE=$(date -d +"yesterday" +'%Y%m%d')
 
 #VERIFICA O USUARIO QUE ESTA EXECUTANDO O SCRIPT
 if [ $USER != $PGUSER ];then
-	echo "Execute $0 como usuario postgres"
+	echo "Execute $0 como usuario postgres" >> ${BACKUP_NAME}/${DATABASE}_dump.log
 	exit 1
 fi
 
@@ -49,7 +49,7 @@ backup_database () {
         DATABASE=$3
         BACKUP_NAME=$4
 	
-	if $PGBIN/pg_dump -h $HOST -p $PORT -U $PGUSER -j 2 -Fd -b -f "$BACKUP_NAME/${DATABASE}" -d $DATABASE 2&> ${BACKUP_NAME}/${DATABASE}_dump.log
+	if $PGBIN/pg_dump -h $HOST -p $PORT -U $PGUSER -j 2 -Fd -b -f "$BACKUP_NAME/${DATABASE}" -d $DATABASE 2> ${BACKUP_NAME}/${DATABASE}_dump.log
 	then
 		echo "BACKUP FINALIZADO COM SUCESSO" >> ${BACKUP_NAME}/${DATABASE}_report.log
 	else
@@ -73,14 +73,16 @@ do_backup() {
 		rm -r $BACKUP_NAME
 	fi
 	
-	echo "INICIANDO BACKUP - HORA: $(date +"%Hh%Mm")"
-	echo "REALIZANDO BACKUP DAS ROLES"
+	echo "INICIANDO PROCESSO - HORA: $(date +"%Hh%Mm")" >> ${BACKUP_NAME}/${DATABASE}_report.log
+	sleep 1
+	echo "REALIZANDO BACKUP DAS ROLES" >> ${BACKUP_NAME}/${DATABASE}_report.log
 	backup_roles $HOST $PORT $DATABASE $BACKUP_NAME
 	wait
-	echo "REALIZANDO DUMP DA BASE DA DADOS"
+	echo "REALIZANDO DUMP DA BASE DA DADOS" >> ${BACKUP_NAME}/${DATABASE}_report.log
 	backup_database $HOST $PORT $DATABASE $BACKUP_NAME
 	wait
-	echo "FINALIZANDO BACKUP - HORA: $(date +"%Hh%Mm")"
+	sleep 1
+	echo "FINALIZANDO BACKUP - HORA: $(date +"%Hh%Mm")" >> ${BACKUP_NAME}/${DATABASE}_report.log
 
 }
 

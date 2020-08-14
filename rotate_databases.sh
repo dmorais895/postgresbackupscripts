@@ -13,8 +13,8 @@ LOG_DIR=/data/backup/logs
 PGBIN=/usr/pgsql-12/bin
 HOST=localhost
 PORT=5432
-YESTERDAY=$(date -d '-1 day' '+%Y%d%m')
-BEFOREYSTERDAY=$(date -d '-2 day' '+%Y%d%m')
+YESTERDAY=$(date -d '-1 day' '+%Y%m%d')
+BEFOREYSTERDAY=$(date -d '-2 day' '+%Y%m%d')
 
 # CREDENCIAIS
 PGUSER=USUARIO_AQUI
@@ -25,7 +25,7 @@ terminate_connections () {
        for datname in $(get_db_list)
        do
                echo "TERMINANDO CONEXOES DE $datname" >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
-
+	       echo $datname	
                $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$datname';"
                wait
        done
@@ -44,7 +44,7 @@ delete_old () {
 
 rename_late () {
 
-       datname='sapiencia'
+       datname=sapiencia
 
        $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $datname RENAME TO ${datname}_${BEFOREYSTERDAY};" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
        wait
@@ -53,7 +53,8 @@ rename_late () {
 
 restore_new_db () {
 
-       DATNAME="sapiencia_${YESTERDAY}"
+       DATNAME=sapiencia_${YESTERDAY}
+       DUMPDIR=${DATNAME}/sapiencia
        JOBS=4
 
        echo "- - - Criando base de dados de $YESTERDAY" >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
@@ -63,13 +64,13 @@ restore_new_db () {
        $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $DATNAME WITH CONNECTION LIMIT 0;" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
 
        #Restaurando novo banco
-       $PGBIN/pg_restore -h $HOST -p $PORT -U $PGUSER -j $JOBS -Fd -d $DATNAME ${BACKUP_DIR}/${DATNAME} &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/pg_restore -h $HOST -p $PORT -U $PGUSER -j $JOBS -Fd -d $DATNAME ${BACKUP_DIR}/${DUMPDIR} &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
 
        # Renomeando novo banco
-       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $DATNANE RENAME TO 'sapiencia';" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $DATNAME RENAME TO sapiencia;" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
 
        # Libera conexoes
-       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE 'sapiencia' WITH CONNECTION LIMIT -1;" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE sapiencia WITH CONNECTION LIMIT -1;" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
 
 }
 
@@ -85,7 +86,7 @@ get_db_list () {
 
 main () {
 
-       DATNAME='sapiencia'
+       DATNAME=sapiencia
 
        echo "PROCESSO INICIADO - HORA: $(date +"%Hh%Mm")" > ${LOG_DIR}/${YESTERDAY}/rotate_database.report
 
@@ -124,6 +125,13 @@ main () {
                echo "Erro ao restaurar o banco $DATNAME, mais informacoes: ${LOG_DIR}/${YESTERDAY}/rotate_database.logs" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
                exit 4
        fi
+
+       DBLIST=$(get_db_list)
+
+       echo "LISTA DE BANCO EM TESTES"
+       echo $($DBLIST | tr " " "\n") &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
+
+       echo "PROCESSO FINALIZADO - HORA: $(date +"%Hh%Mm")" > ${LOG_DIR}/${YESTERDAY}/rotate_database.report
 }
 
 if [ $USER != $PGUSER ];then
@@ -135,6 +143,7 @@ else
        mkdir -p ${LOG_DIR}/${YESTERDAY}
 
        if main > /dev/null
+       then	
                exit 0
        else
                exit 1

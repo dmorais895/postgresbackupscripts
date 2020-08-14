@@ -27,6 +27,7 @@ terminate_connections () {
                echo "TERMINANDO CONEXOES DE $datname" >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
 
                $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$datname';"
+               wait
        done
 
 }
@@ -36,7 +37,8 @@ delete_old () {
        DBLIST=$(get_db_list)
        datname=$(echo $DBLIST | tr " " "\n" | grep '_')
 
-       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "DROP DATABASE $datname;" 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "DROP DATABASE $datname;" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       wait
 
 }
 
@@ -44,29 +46,30 @@ rename_late () {
 
        datname='sapiencia'
 
-       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $datname RENAME TO ${datname}_${BEFOREYSTERDAY};" 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $datname RENAME TO ${datname}_${BEFOREYSTERDAY};" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       wait
 
 }
 
 restore_new_db () {
 
-       DATNAME="sapiencia_$YESTERDAY"
+       DATNAME="sapiencia_${YESTERDAY}"
        JOBS=4
 
        echo "- - - Criando base de dados de $YESTERDAY" >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
-        $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -f ${BACKUP_DIR}/${DATNAME}/databases.sql
+       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -f ${BACKUP_DIR}/${DATNAME}/databases.sql
 
        #Limitando conexoes no novo banco antes do restore
-       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $DATNAME WITH CONNECTION LIMIT 0;" 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $DATNAME WITH CONNECTION LIMIT 0;" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
 
        #Restaurando novo banco
-       $PGBIN/pg_restore -h $HOST -p $PORT -U $PGUSER -j $JOBS -Fd -d $DATNAME ${BACKUP_DIR}/${DATNAME} 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/pg_restore -h $HOST -p $PORT -U $PGUSER -j $JOBS -Fd -d $DATNAME ${BACKUP_DIR}/${DATNAME} &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
 
        # Renomeando novo banco
-       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $DATNANE RENAME TO 'sapiencia';" 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $DATNANE RENAME TO 'sapiencia';" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
 
        # Libera conexoes
-       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE 'sapiencia' WITH CONNECTION LIMIT -1;" 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE 'sapiencia' WITH CONNECTION LIMIT -1;" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
 
 }
 
@@ -87,16 +90,16 @@ main () {
        echo "PROCESSO INICIADO - HORA: $(date +"%Hh%Mm")" > ${LOG_DIR}/${YESTERDAY}/rotate_database.report
 
        echo "Terminando conexoes..." >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
-       if terminate_connections 2&> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       if terminate_connections &> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
        then
                echo "Conexoes terminadas como sucesso"
        else
-               echo "Erro ao terminar conexoes, mais informacoes: ${LOG_DIR}/${YESTERDAY}/rotate_database.logs" 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
+               echo "Erro ao terminar conexoes, mais informacoes: ${LOG_DIR}/${YESTERDAY}/rotate_database.logs" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
                exit 1
        fi
 
        echo "Deletando versao mais antiga do banco - ${DATNAME}_${BEFOREYSTERDAY}"
-       if delete_old 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       if delete_old &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
        then
                echo "${DATNAME}_${BEFOREYSTERDAY} deletado com sucesso" >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
        else
@@ -105,20 +108,20 @@ main () {
        fi
 
        echo "Renomeando versao mais recente para data de $BEFOREYSTERDAY..." >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
-       if rename_late 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       if rename_late &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
        then
                echo "Banco renomeado de $DATNAME para ${datname}_${BEFOREYSTERDAY}" >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
        else
-               echo "Erro ao renomear o banco $DATNAME, mais informacoes: ${LOG_DIR}/${YESTERDAY}/rotate_database.logs" 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
+               echo "Erro ao renomear o banco $DATNAME, mais informacoes: ${LOG_DIR}/${YESTERDAY}/rotate_database.logs" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
                exit 3
        fi
 
        echo "Restaurando versao mais recente - $DATNAME..." >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
-       if restore_new_db 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+       if restore_new_db &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
        then
                echo "Banco $DATNAME restaurado com sucesso." >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
        else
-               echo "Erro ao restaurar o banco $DATNAME, mais informacoes: ${LOG_DIR}/${YESTERDAY}/rotate_database.logs" 2&>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
+               echo "Erro ao restaurar o banco $DATNAME, mais informacoes: ${LOG_DIR}/${YESTERDAY}/rotate_database.logs" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
                exit 4
        fi
 }

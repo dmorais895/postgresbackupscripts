@@ -25,9 +25,12 @@ terminate_connections () {
        for datname in $(get_db_list)
        do
                echo "TERMINANDO CONEXOES DE $datname" >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
-	       echo $datname	
+	       echo $datname >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report	
                $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$datname';"
                wait
+	       #Limitando conexoes no novo banco antes do restore
+               $PGBIN/psql -h $HOST -p $PORT -U $PGUSER -d postgres -c "ALTER DATABASE $datname WITH CONNECTION LIMIT 0;" &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.logs
+	       wait
        done
 
 }
@@ -126,12 +129,12 @@ main () {
                exit 4
        fi
 
-       DBLIST=$(get_db_list)
+       #DBLIST=$(get_db_list)
 
-       echo "LISTA DE BANCO EM TESTES"
-       echo $($DBLIST | tr " " "\n") &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
+       #echo "LISTA DE BANCO EM TESTES"
+       #echo $($DBLIST | tr " " "\n") &>> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
 
-       echo "PROCESSO FINALIZADO - HORA: $(date +"%Hh%Mm")" > ${LOG_DIR}/${YESTERDAY}/rotate_database.report
+       echo "PROCESSO FINALIZADO - HORA: $(date +"%Hh%Mm")" >> ${LOG_DIR}/${YESTERDAY}/rotate_database.report
 }
 
 if [ $USER != $PGUSER ];then
@@ -140,7 +143,9 @@ if [ $USER != $PGUSER ];then
        exit 1
 else
        # CRIA DIRETORIO DE LOGS PARA O DIA DE ONTEM (DATA DO DUMP MAIS RECENTE DO BANCO)
-       mkdir -p ${LOG_DIR}/${YESTERDAY}
+       if [ ! -d ${LOG_DIR}/${YESTERDAY} ];then
+      	       mkdir -p ${LOG_DIR}/${YESTERDAY}
+       fi
 
        if main > /dev/null
        then	
